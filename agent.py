@@ -25,6 +25,20 @@ class Agent:
         self.epsilon = 80 - self.n_games
         state0 = torch.tensor(state, dtype=torch.float)
         q_values = self.model(state0).detach().cpu().numpy()
+        q_values_np = np.asarray(q_values, dtype=np.float64)
+        q_shifted = q_values_np - np.max(q_values_np)
+        exp_q = np.exp(np.clip(q_shifted, -50.0, 50.0))
+        softmax_den = float(np.sum(exp_q))
+        if softmax_den <= 0:
+            policy_probs = np.full(3, 1.0 / 3.0, dtype=np.float64)
+        else:
+            policy_probs = exp_q / softmax_den
+
+        explore_rate = float(np.clip(self.epsilon / 200.0, 0.0, 1.0))
+        best_action = int(np.argmax(q_values_np))
+        effective_probs = np.full(3, explore_rate / 3.0, dtype=np.float64)
+        effective_probs[best_action] += (1.0 - explore_rate)
+
         roll = random.randint(0, 200)
 
         if roll < self.epsilon:
@@ -40,6 +54,9 @@ class Agent:
             "mode": mode,
             "action": int(action),
             "q_values": [float(v) for v in q_values.tolist()],
+            "policy_probs": [float(v) for v in policy_probs.tolist()],
+            "effective_probs": [float(v) for v in effective_probs.tolist()],
+            "explore_rate": explore_rate,
         }
         return action, debug
 

@@ -304,12 +304,13 @@ class SnakeGame:
         if not logs:
             return
 
-        max_lines = 16
-        visible_logs = logs[:max_lines]
+        max_lines = 24
         x0 = 10
         y_start = 12
         panel_width = self.left_logs_width - 20
         line_height = 15
+        max_by_height = max(1, (self.h - y_start - 12) // line_height)
+        visible_logs = logs[: min(max_lines, max_by_height)]
         panel_height = 8 + len(visible_logs) * line_height
 
         rect = pygame.Rect(x0, y_start, panel_width, panel_height)
@@ -317,8 +318,42 @@ class SnakeGame:
         pygame.draw.rect(self.display, (90, 90, 90), rect, 1)
 
         for idx, line in enumerate(visible_logs):
-            text = self.small_font.render(str(line), True, (190, 190, 190))
+            color = self._log_color(str(line), idx)
+            text = self.small_font.render(str(line), True, color)
             self.display.blit(text, (x0 + 5, y_start + 4 + idx * line_height))
+
+    def _log_color(self, line, idx):
+        if idx == 0 or line.startswith("AI Live Log"):
+            return (170, 235, 255)
+        if line.startswith("Danger"):
+            return (255, 135, 135)
+        if line.startswith("Dir "):
+            return (145, 190, 255)
+        if line.startswith("Food "):
+            return (255, 205, 120)
+        if line.startswith("Head:"):
+            return (205, 205, 205)
+        if line.startswith("Q(s)"):
+            return (220, 190, 255)
+        if line.startswith("Policy%"):
+            return (130, 255, 180)
+        if line.startswith("Next%"):
+            return (90, 255, 160)
+        if line.startswith("softmax") or line.startswith("eps-greedy") or line.startswith("e=clip"):
+            return (145, 215, 255)
+        if line.startswith("S:"):
+            return (255, 235, 120)
+        if line.startswith("R:"):
+            return (120, 245, 255)
+        if line.startswith("L:"):
+            return (255, 165, 205)
+        if line.startswith("eps="):
+            return (175, 175, 175)
+        if line.startswith("Explore chance"):
+            return (255, 215, 140)
+        if line.startswith("Action:"):
+            return (255, 245, 170)
+        return (190, 190, 190)
 
     def _draw_score_chart(self, history, rect):
         recent = history[-min(60, len(history)):]

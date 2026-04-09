@@ -33,12 +33,20 @@ def state_to_list(state):
 
 def build_ai_logs(state, decision, head, food):
     q = decision.get("q_values", [0.0, 0.0, 0.0])
+    policy_probs = decision.get("policy_probs", [0.0, 0.0, 0.0])
+    effective_probs = decision.get("effective_probs", [0.0, 0.0, 0.0])
     action_names = ["STRAIGHT", "RIGHT", "LEFT"]
     action_idx = int(decision.get("action", 0))
     mode = decision.get("mode", "unknown")
     epsilon = float(decision.get("epsilon", 0.0))
+    explore_rate = float(decision.get("explore_rate", 0.0))
     roll = int(decision.get("roll", 0))
     state_list = [int(v) for v in state.tolist()]
+    clipped_next_probs = [max(0.0, min(1.0, float(p))) for p in effective_probs]
+
+    def prob_bar(prob, width=16):
+        filled = int(round(prob * width))
+        return "[" + "#" * filled + "-" * (width - filled) + "]"
 
     logs = [
         "AI Live Log",
@@ -48,7 +56,22 @@ def build_ai_logs(state, decision, head, food):
         f"Food L/R/U/D: {state_list[7]}/{state_list[8]}/{state_list[9]}/{state_list[10]}",
         f"Head: {head}  Food: {food}",
         f"Q(s)=[{q[0]:.2f}, {q[1]:.2f}, {q[2]:.2f}]",
+        (
+            "Policy% S/R/L: "
+            f"{policy_probs[0] * 100:.1f}/{policy_probs[1] * 100:.1f}/{policy_probs[2] * 100:.1f}"
+        ),
+        (
+            "Next% S/R/L: "
+            f"{effective_probs[0] * 100:.1f}/{effective_probs[1] * 100:.1f}/{effective_probs[2] * 100:.1f}"
+        ),
+        "softmax: p_i=exp(q_i-m)/sum_j exp(q_j-m), m=max(q)",
+        "eps-greedy: P_i=e/3 + (1-e)*I(i=argmax q)",
+        f"e=clip(eps/200, 0, 1)={explore_rate:.3f}",
+        f"S: {clipped_next_probs[0] * 100:5.1f}% {prob_bar(clipped_next_probs[0])}",
+        f"R: {clipped_next_probs[1] * 100:5.1f}% {prob_bar(clipped_next_probs[1])}",
+        f"L: {clipped_next_probs[2] * 100:5.1f}% {prob_bar(clipped_next_probs[2])}",
         f"eps={epsilon:.1f}, roll={roll}, mode={mode}",
+        f"Explore chance: {explore_rate * 100:.1f}%",
         f"Action: {action_names[action_idx]} ({action_idx})",
     ]
     return logs
